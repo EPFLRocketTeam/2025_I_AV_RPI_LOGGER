@@ -7,13 +7,13 @@
 #include <fcntl.h>
 #include <termios.h>
 #include <unistd.h>
-#include <cstring>  // for memcpy
+#include <cstring>  // memcpy
 #include "capsule.h"
 
-// Global CSV file stream
+// Global CSV stream
 std::ofstream csv;
 
-// Helper to get date string for file naming
+// Get current date string for file naming: DD_MM_YYYY
 std::string getDateStr() {
     time_t t = time(nullptr);
     struct tm tm;
@@ -25,29 +25,34 @@ std::string getDateStr() {
     return oss.str();
 }
 
-// Helper to get timestamp string for each packet row
+// Get current time HH:MM:SS
 std::string getTimestamp() {
-    auto t = std::time(nullptr);
+    time_t t = time(nullptr);
     struct tm tm;
     localtime_r(&t, &tm);
-    char buffer[20];
-    strftime(buffer, sizeof(buffer), "%H:%M:%S", &tm);
-    return std::string(buffer);
+    char buf[20];
+    strftime(buf, sizeof(buf), "%H:%M:%S", &tm);
+    return std::string(buf);
 }
 
-// Decode uint16_t from two bytes (little-endian)
+// Decode little-endian uint16_t from two bytes
 uint16_t toUint16(const uint8_t* bytes) {
     return bytes[0] | (bytes[1] << 8);
 }
 
-// This is your known struct: 5 uint16_t fields (10 bytes payload)
-void handlePacket(uint8_t packetId, uint8_t *data, uint32_t len) {
+// Convert Q8.8 fixed point to float
+float q8_8ToFloat(uint16_t val) {
+    return static_cast<float>(static_cast<int16_t>(val)) / 256.0f;
+}
+
+// Handle decoded packet payload and write CSV line
+void handlePacket(uint8_t packetId, uint8_t* data, uint32_t len) {
     if (len < 10) {
-        std::cerr << "Warning: packet payload too short (" << len << " bytes), skipping\n";
+        std::cerr << "Warning: packet too short (" << len << " bytes), skipping\n";
         return;
     }
 
-    // Open CSV file on first call
+    // Open CSV file if not open yet
     if (!csv.is_open()) {
         std::string filename = getDateStr() + "_Flight_Data_01.csv";
         csv.open(filename);
@@ -55,19 +60,26 @@ void handlePacket(uint8_t packetId, uint8_t *data, uint32_t len) {
             std::cerr << "Failed to open CSV file for writing\n";
             return;
         }
-        // Write CSV header
+        // CSV header line
         csv << "timestamp_rpi,packet_id,pressure_ETH,pressure_N2O,chamber_pressure,temp_N2O,hv_voltage\n";
         std::cout << "Logging to: " << filename << std::endl;
     }
 
-    // Decode fields
-    uint16_t pressure_ETH      = toUint16(data + 0);
-    uint16_t pressure_N2O      = toUint16(data + 2);
-    uint16_t chamber_pressure  = toUint16(data + 4);
-    uint16_t temp_N2O          = toUint16(data + 6);
-    uint16_t hv_voltage        = toUint16(data + 8);
+    // Decode raw fields from payload (little-endian uint16_t)
+    uint16_t pressure_ETH_raw      = toUint16(data + 0);
+    uint16_t pressure_N2O_raw      = toUint16(data + 2);
+    uint16_t chamber_pressure_raw  = toUint16(data + 4);
+    uint16_t temp_N2O_raw          = toUint16(data + 6);
+    uint16_t hv_voltage_raw        = toUint16(data + 8);
 
-    // Write decoded data row to CSV
+    // Convert fixed-point Q8.8 to floats
+    float pressure_ETH     = q8_8ToFloat(pressure_ETH_raw);
+    float pressure_N2O     = q8_8ToFloat(pressure_N2O_raw);
+    float chamber_pressure = q8_8ToFloat(chamber_pressure_raw);
+    float temp_N2O         = q8_8ToFloat(temp_N2O_raw);
+    float hv_voltage       = q8_8ToFloat(hv_voltage_raw);
+
+    // Write CSV line with timestamp and decoded fields
     csv << getTimestamp() << "," << (int)packetId << ","
         << pressure_ETH << "," << pressure_N2O << "," << chamber_pressure << ","
         << temp_N2O << "," << hv_voltage << "\n";
@@ -75,12 +87,11 @@ void handlePacket(uint8_t packetId, uint8_t *data, uint32_t len) {
 }
 
 int main(int argc, char* argv[]) {
-    const char* port = "/dev/serial0";   // default UART port
-    int baudrate = B115200;               // default baudrate
+    const char* port = "/dev/serial0";
+    int baudrate = B115200;
 
-    if (argc >= 2) {
-        port = argv[1];
-    }
+    // Parse command line arguments
+    if (argc >= 2) port = argv[1];
     if (argc >= 3) {
         int b = atoi(argv[2]);
         switch (b) {
@@ -90,7 +101,7 @@ int main(int argc, char* argv[]) {
             case 57600: baudrate = B57600; break;
             case 115200: baudrate = B115200; break;
             default:
-                std::cerr << "Unsupported baudrate, using 115200" << std::endl;
+                std::cerr << "Unsupported baudrate, using 115200\n";
                 baudrate = B115200;
         }
     }
@@ -98,41 +109,43 @@ int main(int argc, char* argv[]) {
     // Open serial port
     int fd = open(port, O_RDWR | O_NOCTTY);
     if (fd < 0) {
-        perror("Failed to open port");
+        perror("Failed to open serial port");
         return 1;
     }
 
-    // Configure serial port
+    // Configure serial port parameters
     termios tty{};
     if (tcgetattr(fd, &tty) != 0) {
         perror("tcgetattr");
         close(fd);
         return 1;
     }
+
     cfsetispeed(&tty, baudrate);
     cfsetospeed(&tty, baudrate);
     tty.c_cflag |= (CLOCAL | CREAD);
     tty.c_cflag &= ~CSIZE;
-    tty.c_cflag |= CS8;       // 8 data bits
-    tty.c_cflag &= ~PARENB;   // no parity
-    tty.c_cflag &= ~CSTOPB;   // 1 stop bit
-    tty.c_cflag &= ~CRTSCTS;  // no flow control
-    tty.c_lflag = 0;          // raw input
-    tty.c_oflag = 0;          // raw output
-    tty.c_iflag = 0;          // raw input
+    tty.c_cflag |= CS8;        // 8 data bits
+    tty.c_cflag &= ~PARENB;    // no parity
+    tty.c_cflag &= ~CSTOPB;    // 1 stop bit
+    tty.c_cflag &= ~CRTSCTS;   // no flow control
+    tty.c_lflag = 0;           // raw input
+    tty.c_oflag = 0;           // raw output
+    tty.c_iflag = 0;           // raw input
+
     if (tcsetattr(fd, TCSANOW, &tty) != 0) {
         perror("tcsetattr");
         close(fd);
         return 1;
     }
 
-    // Create Capsule instance with the callback
+    // Create Capsule decoder with callback
     CapsuleStatic capsule(handlePacket);
 
-    uint8_t buf[1];
-    std::cout << "Listening on " << port << " at baudrate " << baudrate << std::endl;
+    std::cout << "Listening on " << port << " at baud " << baudrate << std::endl;
 
-    // Main read loop (runs forever)
+    uint8_t buf[1];
+    // Main loop to read bytes and feed decoder
     while (true) {
         ssize_t n = read(fd, buf, 1);
         if (n > 0) {
@@ -141,12 +154,9 @@ int main(int argc, char* argv[]) {
             perror("Read error");
             break;
         }
-        // If n==0, no data, continue loop
     }
 
-    if (csv.is_open()) {
-        csv.close();
-    }
+    if (csv.is_open()) csv.close();
     close(fd);
     return 0;
 }
