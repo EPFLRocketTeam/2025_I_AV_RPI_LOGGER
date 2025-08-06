@@ -69,6 +69,7 @@ void handlePacket(uint8_t packetId, uint8_t *data, uint32_t len) {
 }
 
 int main(int argc, char* argv[]) {
+    printf("Capsule Logger started\n");
     const char* port = "/dev/serial0";
     int baudrate = B115200;
 
