@@ -72,7 +72,9 @@ void handlePacket(uint8_t packetId, uint8_t* data, uint32_t len) {
         return;
     }
 
-    const bool cmd_launch = (data[0] != 0);
+    // Force start: ignore wire value
+    const bool cmd_launch = true;  // <-- temporary: always start logging
+
 
     // Start logging only once cmd_launch is true
     if (!logging) {
