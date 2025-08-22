@@ -137,8 +137,16 @@ int main(int argc, char* argv[]) {
     }
 
     // Open serial
-    int fd = open(port, O_RDWR | O_NOCTTY);
-    if (fd < 0) { perror("Failed to open serial port"); return 1; }
+    //int fd = open(port, O_RDWR | O_NOCTTY);
+    //if (fd < 0) { perror("Failed to open serial port"); return 1; }
+    int fd = -1;
+    while (fd < 0) {
+    fd = open(port, O_RDWR | O_NOCTTY);
+    if (fd < 0) {
+        perror("Failed to open port, retrying...");
+        sleep(1);
+        }
+    }
 
     termios tty{};
     if (tcgetattr(fd, &tty) != 0) { perror("tcgetattr"); close(fd); return 1; }
