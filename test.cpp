@@ -67,8 +67,8 @@ inline float q8_8ToFloat(uint16_t v) {
 // [10]   : vent_N2O     (u8 0/1)
 // [11]   : solenoid_N2  (u8 0/1)
 void handlePacket(uint8_t packetId, uint8_t* data, uint32_t len) {
-    std::cout << "[DEBUG] got packetId=" << (int)packetId
-              << " with len=" << len << std::endl;
+    std::cout << "[DECODED] packetId=" << (int)packetId
+              << " len=" << len << std::endl;
 
     for (uint32_t i = 0; i < len; i++) {
         std::cout << std::hex << std::setw(2) << std::setfill('0')
@@ -84,11 +84,8 @@ void handlePacket(uint8_t packetId, uint8_t* data, uint32_t len) {
     // Force start: ignore wire value
     const bool cmd_launch = true;  // <-- temporary: always start logging
 
-
     // Start logging only once cmd_launch is true
     if (!logging) {
-        if (!cmd_launch) return;
-
         const std::string base = getDateStr() + "_Propulsion_Data";
         const std::string filename = getUniqueFilename(base);
         csv.open(filename);
@@ -104,7 +101,6 @@ void handlePacket(uint8_t packetId, uint8_t* data, uint32_t len) {
                "vent_ETH,vent_N2O,solenoid_N2\n";
         csv.flush();
         logging = true;
-        // fall through to also log this first packet
     }
 
     // Decode Q8.8 fields
@@ -129,7 +125,6 @@ void handlePacket(uint8_t packetId, uint8_t* data, uint32_t len) {
     }
 }
 
-
 int main(int argc, char* argv[]) {
     const char* port = "/dev/serial0";
     int baudrate = B115200;
@@ -149,15 +144,13 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Open serial
-    //int fd = open(port, O_RDWR | O_NOCTTY);
-    //if (fd < 0) { perror("Failed to open serial port"); return 1; }
+    // Open serial (retry until success)
     int fd = -1;
     while (fd < 0) {
-    fd = open(port, O_RDWR | O_NOCTTY);
-    if (fd < 0) {
-        perror("Failed to open port, retrying...");
-        sleep(1);
+        fd = open(port, O_RDWR | O_NOCTTY);
+        if (fd < 0) {
+            perror("Failed to open port, retrying...");
+            sleep(1);
         }
     }
 
@@ -178,15 +171,29 @@ int main(int argc, char* argv[]) {
 
     if (tcsetattr(fd, TCSANOW, &tty) != 0) { perror("tcsetattr"); close(fd); return 1; }
 
-    // Feed bytes to Capsule
     CapsuleStatic capsule(handlePacket);
     std::cout << "Listening on " << port << " at 115200\n";
 
     uint8_t b;
     while (true) {
         ssize_t n = read(fd, &b, 1);
-        if (n > 0)       capsule.decode(b);
-        else if (n < 0) { perror("Read error"); break; }
+        if (n > 0) {
+            // RAW BYTE DEBUG PRINT
+            std::cout << "[RAW] 0x"
+                      << std::hex << std::setw(2) << std::setfill('0')
+                      << (int)b
+                      << std::dec << " (";
+            if (b >= 32 && b <= 126) std::cout << (char)b;
+            else std::cout << ".";
+            std::cout << ")\n";
+
+            // Pass to capsule decoder
+            capsule.decode(b);
+        }
+        else if (n < 0) {
+            perror("Read error");
+            break;
+        }
     }
 
     if (csv.is_open()) csv.close();
