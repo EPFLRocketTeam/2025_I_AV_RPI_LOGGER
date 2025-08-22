@@ -11,7 +11,7 @@
 
 // Global CSV file stream
 std::ofstream csv;
-
+bool logging = false;
 std::string getDateStr() {
     time_t t = time(nullptr);
     struct tm tm;
@@ -35,8 +35,10 @@ std::string getTimestamp() {
 // Callback called by Capsule when a valid packet is decoded
 void handlePacket(uint8_t packetId, uint8_t *data, uint32_t len) {
     std::cout << "Packet received! ID=" << (int)packetId << ", length=" << len << std::endl;
+    bool launch = data[0] & 0x01; 
+    if (!logging && launch) {
+        logging = true;
 
-    if (!csv.is_open()) {
         int counter = 1;
         std::string base = getDateStr() + "_Flight_Data_";
         std::string filename;
@@ -49,7 +51,7 @@ void handlePacket(uint8_t packetId, uint8_t *data, uint32_t len) {
             counter++;
         }
         csv.open(filename);
-        std::cout << "Logging to: " << filename << std::endl;
+        std::cout << "🚀 Launch detected, logging to: " << filename << std::endl;
 
         // Write CSV header
         csv << "timestamp_rpi,packet_id";
@@ -59,13 +61,15 @@ void handlePacket(uint8_t packetId, uint8_t *data, uint32_t len) {
         csv << "\n";
     }
 
-    // Write packet data line
-    csv << getTimestamp() << "," << (int)packetId;
-    for (uint32_t i = 0; i < len; i++) {
-        csv << "," << (int)data[i];
+    // If logging is active, actually record data
+    if (logging && csv.is_open()) {
+        csv << getTimestamp() << "," << (int)packetId;
+        for (uint32_t i = 0; i < len; i++) {
+            csv << "," << (int)data[i];
+        }
+        csv << "\n";
+        csv.flush(); // Save immediately
     }
-    csv << "\n";
-    csv.flush(); // Save immediately
 }
 
 int main(int argc, char* argv[]) {
