@@ -57,65 +57,67 @@ inline float q8_8ToFloat(uint16_t v) {
     return static_cast<float>(static_cast<int16_t>(v)) / 256.0f;
 }
 
-// ===== Capsule callback =====
-// Expect payload layout (packed):
-// [0]   : launch (uint8_t)
-// [1..2]: pressure_ETH (u16, Q8.8 LE)
-// [3..4]: pressure_N2O
-// [5..6]: chamber_pressure
-// [7..8]: temp_N2O
-// [9..10]: hv_voltage
+// New payload layout (12 bytes, little-endian):
+// [0]    : cmd_launch   (u8 0/1)
+// [1..2] : gimbal_x     (u16 Q8.8 LE)
+// [3..4] : gimbal_y     (u16 Q8.8 LE)
+// [5..6] : main_ETH     (u16 Q8.8 LE)
+// [7..8] : main_N2O     (u16 Q8.8 LE)
+// [9]    : vent_ETH     (u8 0/1)
+// [10]   : vent_N2O     (u8 0/1)
+// [11]   : solenoid_N2  (u8 0/1)
 void handlePacket(uint8_t packetId, uint8_t* data, uint32_t len) {
-    // Basic guard: need at least launch + 5*uint16 = 11 bytes
-    if (len < 11) {
-        std::cerr << "Warning: packet too short (" << len << " bytes), waiting...\n";
+    if (len < 12) {
+        std::cerr << "Warning: prop_board packet too short (" << len << " bytes)\n";
         return;
     }
 
-    // 1) Check launch flag in first byte
-    const bool launch = (data[0] == 1);   // teensy sets 0 or 1
-    if (!logging) {
-        if (!launch) {
-            // Optional: uncomment if you want periodic feedback
-            // static uint32_t lastPrint = 0;
-            // uint32_t now = static_cast<uint32_t>(time(nullptr));
-            // if (now != lastPrint) { lastPrint = now; std::cout << "Waiting for launch...\n"; }
-            return; // do nothing until launch
-        }
+    const bool cmd_launch = (data[0] != 0);
 
-        // Create CSV on first launch==true
-        const std::string base = getDateStr() + "_Flight_Data";
+    // Start logging only once cmd_launch is true
+    if (!logging) {
+        if (!cmd_launch) return;
+
+        const std::string base = getDateStr() + "_Propulsion_Data";
         const std::string filename = getUniqueFilename(base);
         csv.open(filename);
         if (!csv.is_open()) {
             std::cerr << "Failed to open CSV for writing\n";
             return;
         }
-        std::cout << "🚀 Launch detected, logging to: " << filename << std::endl;
+        std::cout << "🚀 cmd_launch detected, logging to: " << filename << std::endl;
 
-        // Header with named, human-readable fields
-        csv << "timestamp_rpi,packet_id,pressure_ETH,pressure_N2O,chamber_pressure,temp_N2O,hv_voltage\n";
+        csv << "timestamp_rpi,packet_id,cmd_launch,"
+               "gimbal_x,gimbal_y,"
+               "main_ETH,main_N2O,"
+               "vent_ETH,vent_N2O,solenoid_N2\n";
         csv.flush();
-
         logging = true;
-        // Note: we intentionally continue to decode & log this same packet below.
+        // fall through to also log this first packet
     }
 
-    // 2) Decode Q8.8 fields from known offsets
-    float pressure_ETH     = q8_8ToFloat(u16le(data + 1));
-    float pressure_N2O     = q8_8ToFloat(u16le(data + 3));
-    float chamber_pressure = q8_8ToFloat(u16le(data + 5));
-    float temp_N2O         = q8_8ToFloat(u16le(data + 7));
-    float hv_voltage       = q8_8ToFloat(u16le(data + 9));
+    // Decode Q8.8 fields
+    float gimbal_x = q8_8ToFloat(u16le(data + 1));
+    float gimbal_y = q8_8ToFloat(u16le(data + 3));
+    float main_ETH = q8_8ToFloat(u16le(data + 5));
+    float main_N2O = q8_8ToFloat(u16le(data + 7));
 
-    // 3) Write CSV line
+    // Decode booleans
+    int vent_ETH    = data[9]  ? 1 : 0;
+    int vent_N2O    = data[10] ? 1 : 0;
+    int solenoid_N2 = data[11] ? 1 : 0;
+
     if (csv.is_open()) {
         csv << getTimestamp() << "," << static_cast<int>(packetId) << ","
-            << pressure_ETH << "," << pressure_N2O << "," << chamber_pressure << ","
-            << temp_N2O << "," << hv_voltage << "\n";
+            << (cmd_launch ? 1 : 0) << ","
+            << gimbal_x << "," << gimbal_y << ","
+            << main_ETH << "," << main_N2O << ","
+            << vent_ETH << "," << vent_N2O << "," << solenoid_N2
+            << "\n";
         csv.flush();
     }
 }
+
 
 int main(int argc, char* argv[]) {
     const char* port = "/dev/serial0";
