@@ -188,7 +188,9 @@ int main(int argc, char* argv[]) {
             std::cout << ")\n";
 
             // Pass to capsule decoder
-            capsule.decode(b);
+            // Instead of capsule.decode(b);
+            csv << getTimestamp() << ",RAW," << std::hex << (int)b << std::dec << "\n";
+
         }
         else if (n < 0) {
             perror("Read error");
