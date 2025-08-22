@@ -67,8 +67,15 @@ inline float q8_8ToFloat(uint16_t v) {
 // [10]   : vent_N2O     (u8 0/1)
 // [11]   : solenoid_N2  (u8 0/1)
 void handlePacket(uint8_t packetId, uint8_t* data, uint32_t len) {
-    std::cout << "[DEBUG] got packetId=" << (int)packetId 
-    << " with len=" << len << std::endl;
+    std::cout << "[DEBUG] got packetId=" << (int)packetId
+              << " with len=" << len << std::endl;
+
+    for (uint32_t i = 0; i < len; i++) {
+        std::cout << std::hex << std::setw(2) << std::setfill('0')
+                  << (int)data[i] << " ";
+    }
+    std::cout << std::dec << std::endl;
+
     if (len < 12) {
         std::cerr << "Warning: prop_board packet too short (" << len << " bytes)\n";
         return;
