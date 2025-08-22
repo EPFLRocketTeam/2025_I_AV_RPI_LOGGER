@@ -1,204 +1,163 @@
 #include <iostream>
-#include <fstream>
 #include <iomanip>
-#include <sstream>
-#include <string>
-#include <ctime>
 #include <fcntl.h>
-#include <termios.h>
 #include <unistd.h>
-#include <fstream>
-#include "capsule.h"
+#include <termios.h>
+#include <stdint.h>
+#include <string.h>
 
-// ===== Globals =====
-std::ofstream csv;
-bool logging = false;
+// ---------------- Capsule Decoder ----------------
+class Capsule {
+public:
+    using Handler = void(*)(uint8_t, uint8_t*, uint32_t);
 
-// ===== Helpers =====
-std::string getDateStr() {
-    time_t t = time(nullptr);
-    struct tm tm;
-    localtime_r(&t, &tm);
-    std::ostringstream oss;
-    oss << std::setw(2) << std::setfill('0') << tm.tm_mday << "_"
-        << std::setw(2) << std::setfill('0') << tm.tm_mon + 1 << "_"
-        << tm.tm_year + 1900;
-    return oss.str();
-}
+    Capsule(Handler h) : handler(h), state(0), len(0), packetId(0) {}
 
-std::string getUniqueFilename(const std::string& baseName) {
-    int counter = 1;
-    std::string filename;
-    while (true) {
-        std::ostringstream oss;
-        oss << baseName << "_" << std::setw(2) << std::setfill('0') << counter << ".csv";
-        filename = oss.str();
-        std::ifstream f(filename);
-        if (!f.good()) break;
-        counter++;
+    void decode(uint8_t b) {
+        switch (state) {
+            case 0: // packet ID
+                packetId = b;
+                state = 1;
+                len = 0;
+                break;
+            case 1: // payload length
+                len = b;
+                if (len > sizeof(buffer)) {
+                    len = 0;
+                    state = 0;
+                } else {
+                    pos = 0;
+                    state = (len == 0) ? 3 : 2;
+                }
+                break;
+            case 2: // payload bytes
+                buffer[pos++] = b;
+                if (pos >= len) state = 3;
+                break;
+            case 3: // terminator
+                if (b == 0x00 && handler) {
+                    handler(packetId, buffer, len);
+                }
+                state = 0;
+                break;
+        }
     }
-    return filename;
-}
 
-std::string getTimestamp() {
-    time_t t = time(nullptr);
-    struct tm tm;
-    localtime_r(&t, &tm);
-    char buf[20];
-    strftime(buf, sizeof(buf), "%H:%M:%S", &tm);
-    return std::string(buf);
-}
+private:
+    Handler handler;
+    uint8_t state;
+    uint8_t packetId;
+    uint8_t buffer[256];
+    uint32_t len;
+    uint32_t pos;
+};
 
-// little-endian 16-bit from an arbitrary byte offset
-inline uint16_t u16le(const uint8_t* p) { return static_cast<uint16_t>(p[0] | (p[1] << 8)); }
+// ---------------- Prop Board Packet ----------------
+#pragma pack(push, 1)
+struct prop_board_downlink_packet {
+    uint8_t  cmd_launch;
+    uint16_t gimbal_x;
+    uint16_t gimbal_y;
+    uint16_t main_ETH;
+    uint16_t main_N2O;
+    uint8_t  vent_ETH;
+    uint8_t  vent_N2O;
+    uint8_t  solenoid_N2;
+};
+#pragma pack(pop)
 
-// Q8.8 to float (signed semantics like Teensy)
 inline float q8_8ToFloat(uint16_t v) {
     return static_cast<float>(static_cast<int16_t>(v)) / 256.0f;
 }
 
-// New payload layout (12 bytes, little-endian):
-// [0]    : cmd_launch   (u8 0/1)
-// [1..2] : gimbal_x     (u16 Q8.8 LE)
-// [3..4] : gimbal_y     (u16 Q8.8 LE)
-// [5..6] : main_ETH     (u16 Q8.8 LE)
-// [7..8] : main_N2O     (u16 Q8.8 LE)
-// [9]    : vent_ETH     (u8 0/1)
-// [10]   : vent_N2O     (u8 0/1)
-// [11]   : solenoid_N2  (u8 0/1)
+// ---------------- Handler ----------------
 void handlePacket(uint8_t packetId, uint8_t* data, uint32_t len) {
-    std::cout << "[DECODED] packetId=" << (int)packetId
-              << " len=" << len << std::endl;
+    std::cout << "\n[Packet] ID=" << (int)packetId << " len=" << len << std::endl;
 
-    for (uint32_t i = 0; i < len; i++) {
-        std::cout << std::hex << std::setw(2) << std::setfill('0')
-                  << (int)data[i] << " ";
-    }
-    std::cout << std::dec << std::endl;
-
-    if (len < 12) {
-        std::cerr << "Warning: prop_board packet too short (" << len << " bytes)\n";
+    if (len != sizeof(prop_board_downlink_packet)) {
+        std::cerr << "Warning: unexpected payload size (" << len
+                  << ", expected " << sizeof(prop_board_downlink_packet) << ")\n";
         return;
     }
 
-    // Force start: ignore wire value
-    const bool cmd_launch = true;  // <-- temporary: always start logging
+    auto* pkt = reinterpret_cast<prop_board_downlink_packet*>(data);
 
-    // Start logging only once cmd_launch is true
-    if (!logging) {
-        const std::string base = getDateStr() + "_Propulsion_Data";
-        const std::string filename = getUniqueFilename(base);
-        csv.open(filename);
-        if (!csv.is_open()) {
-            std::cerr << "Failed to open CSV for writing\n";
-            return;
-        }
-        std::cout << "🚀 cmd_launch detected, logging to: " << filename << std::endl;
-
-        csv << "timestamp_rpi,packet_id,cmd_launch,"
-               "gimbal_x,gimbal_y,"
-               "main_ETH,main_N2O,"
-               "vent_ETH,vent_N2O,solenoid_N2\n";
-        csv.flush();
-        logging = true;
-    }
-
-    // Decode Q8.8 fields
-    float gimbal_x = q8_8ToFloat(u16le(data + 1));
-    float gimbal_y = q8_8ToFloat(u16le(data + 3));
-    float main_ETH = q8_8ToFloat(u16le(data + 5));
-    float main_N2O = q8_8ToFloat(u16le(data + 7));
-
-    // Decode booleans
-    int vent_ETH    = data[9]  ? 1 : 0;
-    int vent_N2O    = data[10] ? 1 : 0;
-    int solenoid_N2 = data[11] ? 1 : 0;
-
-    if (csv.is_open()) {
-        csv << getTimestamp() << "," << static_cast<int>(packetId) << ","
-            << (cmd_launch ? 1 : 0) << ","
-            << gimbal_x << "," << gimbal_y << ","
-            << main_ETH << "," << main_N2O << ","
-            << vent_ETH << "," << vent_N2O << "," << solenoid_N2
-            << "\n";
-        csv.flush();
-    }
+    std::cout << std::fixed << std::setprecision(2)
+              << "  cmd_launch=" << (int)pkt->cmd_launch
+              << "  gimbal_x=" << q8_8ToFloat(pkt->gimbal_x)
+              << "  gimbal_y=" << q8_8ToFloat(pkt->gimbal_y)
+              << "  main_ETH=" << q8_8ToFloat(pkt->main_ETH)
+              << "  main_N2O=" << q8_8ToFloat(pkt->main_N2O)
+              << "  vent_ETH=" << (int)pkt->vent_ETH
+              << "  vent_N2O=" << (int)pkt->vent_N2O
+              << "  solenoid_N2=" << (int)pkt->solenoid_N2
+              << std::endl;
 }
 
-int main(int argc, char* argv[]) {
-    const char* port = "/dev/serial0";
-    int baudrate = B115200;
-
-    if (argc >= 2) port = argv[1];
-    if (argc >= 3) {
-        int b = atoi(argv[2]);
-        switch (b) {
-            case 9600: baudrate = B9600; break;
-            case 19200: baudrate = B19200; break;
-            case 38400: baudrate = B38400; break;
-            case 57600: baudrate = B57600; break;
-            case 115200: baudrate = B115200; break;
-            default:
-                std::cerr << "Unsupported baudrate, using 115200\n";
-                baudrate = B115200;
-        }
-    }
-
-    // Open serial (retry until success)
-    int fd = -1;
-    while (fd < 0) {
-        fd = open(port, O_RDWR | O_NOCTTY);
-        if (fd < 0) {
-            perror("Failed to open port, retrying...");
-            sleep(1);
-        }
+// ---------------- Serial Setup ----------------
+int openSerial(const char* device, int baud) {
+    int fd = open(device, O_RDWR | O_NOCTTY | O_SYNC);
+    if (fd < 0) {
+        perror("open");
+        return -1;
     }
 
     termios tty{};
-    if (tcgetattr(fd, &tty) != 0) { perror("tcgetattr"); close(fd); return 1; }
+    if (tcgetattr(fd, &tty) != 0) {
+        perror("tcgetattr");
+        close(fd);
+        return -1;
+    }
 
-    cfsetispeed(&tty, baudrate);
-    cfsetospeed(&tty, baudrate);
-    tty.c_cflag |= (CLOCAL | CREAD);
-    tty.c_cflag &= ~CSIZE;
-    tty.c_cflag |= CS8;
-    tty.c_cflag &= ~PARENB;
-    tty.c_cflag &= ~CSTOPB;
-    tty.c_cflag &= ~CRTSCTS;
+    cfsetospeed(&tty, baud);
+    cfsetispeed(&tty, baud);
+
+    tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8; // 8-bit
+    tty.c_iflag &= ~IGNBRK;
     tty.c_lflag = 0;
     tty.c_oflag = 0;
-    tty.c_iflag = 0;
+    tty.c_cc[VMIN] = 1;
+    tty.c_cc[VTIME] = 1;
 
-    if (tcsetattr(fd, TCSANOW, &tty) != 0) { perror("tcsetattr"); close(fd); return 1; }
+    tty.c_iflag &= ~(IXON | IXOFF | IXANY); // no flow control
+    tty.c_cflag |= (CLOCAL | CREAD);
+    tty.c_cflag &= ~(PARENB | PARODD);
+    tty.c_cflag &= ~CSTOPB;
+    tty.c_cflag &= ~CRTSCTS;
 
-    CapsuleStatic capsule(handlePacket);
-    std::cout << "Listening on " << port << " at 115200\n";
+    if (tcsetattr(fd, TCSANOW, &tty) != 0) {
+        perror("tcsetattr");
+        close(fd);
+        return -1;
+    }
 
-    uint8_t b;
+    return fd;
+}
+
+// ---------------- Main ----------------
+#define SERIAL_PORT "/dev/serial0"
+
+int main() {
+    int fd = openSerial(SERIAL_PORT, B115200);
+    if (fd < 0) return 1;
+
+    std::cout << "Listening on " << SERIAL_PORT << " at 115200 baud...\n";
+
+    Capsule capsule(handlePacket);
+
+    uint8_t buf[256];
     while (true) {
-        ssize_t n = read(fd, &b, 1);
+        int n = read(fd, buf, sizeof(buf));
         if (n > 0) {
-            // RAW BYTE DEBUG PRINT
-            std::cout << "[RAW] 0x"
-                      << std::hex << std::setw(2) << std::setfill('0')
-                      << (int)b
-                      << std::dec << " (";
-            if (b >= 32 && b <= 126) std::cout << (char)b;
-            else std::cout << ".";
-            std::cout << ")\n";
-
-            // Pass to capsule decoder
-            // Instead of capsule.decode(b);
-            csv << getTimestamp() << ",RAW," << std::hex << (int)b << std::dec << "\n";
-
-        }
-        else if (n < 0) {
-            perror("Read error");
+            for (int i = 0; i < n; i++) {
+                capsule.decode(buf[i]);
+            }
+        } else if (n < 0) {
+            perror("read");
             break;
         }
     }
 
-    if (csv.is_open()) csv.close();
     close(fd);
     return 0;
 }
