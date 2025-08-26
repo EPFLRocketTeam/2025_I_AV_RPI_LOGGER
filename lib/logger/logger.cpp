@@ -24,12 +24,12 @@ void SerialLogger::run()
 
     while (true) 
     {
-        uint8_t len = SerialCapsule->getCodedLen(sizeof(log_packet_t));
+        uint8_t len = SerialCapsule.getCodedLen(sizeof(log_packet_t));
         uint8_t buffer[len];
 
         boost::asio::read(serial, boost::asio::buffer(buffer, len));
         for (int i = 0; i < len; i++)
-            SerialCapsule->decode(buffer[i]);
+            SerialCapsule.decode(buffer[i]);
 
         csv << packetToCSV(*log_packet) << std::endl;
         csv.flush();
