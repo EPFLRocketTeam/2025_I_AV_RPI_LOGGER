@@ -4,7 +4,7 @@ SerialLogger::SerialLogger(const std::string& port, unsigned int baud, const std
     : serial(io, port)
 {
     log_packet = new log_packet_t;
-    SerialCapsule = new Capsule(handleSerialCapsule);
+    SerialCapsule = new Capsule(SerialLogger::handleSerialCapsule);
 
     serial.set_option(boost::asio::serial_port_base::baud_rate(baud));
 

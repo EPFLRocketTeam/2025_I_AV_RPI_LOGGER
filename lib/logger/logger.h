@@ -12,6 +12,7 @@
 class SerialLogger {
 public:
     SerialLogger(const std::string& port, unsigned int baud, const std::string& csvFile);
+    void handleSerialCapsule(uint8_t packetId, uint8_t *dataIn, uint32_t len);
     void run();
 
 private:
@@ -22,8 +23,6 @@ private:
     log_packet_t* log_packet;
 
     CapsuleStatic* SerialCapsule;
-
-    void handleSerialCapsule(uint8_t packetId, uint8_t *dataIn, uint32_t len);
 };
 
 
