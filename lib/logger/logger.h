@@ -22,7 +22,7 @@ private:
 
     log_packet_t* log_packet;
 
-    CapsuleStatic* SerialCapsule;
+    Capsule<SerialLogger> SerialCapsule;
 };
 
 

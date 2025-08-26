@@ -4,15 +4,12 @@ SerialLogger::SerialLogger(const std::string& port, unsigned int baud, const std
     : serial(io, port)
 {
     log_packet = new log_packet_t;
-    SerialCapsule = new Capsule(
-    [this](uint8_t packetId, uint8_t* dataIn, uint32_t len) {
-        handleSerialCapsule(packetId, dataIn, len);
-    }
-);
+    SerialCapsule = Capsule(&SerialLogger::handleSerialCapsule, this);
 
     serial.set_option(boost::asio::serial_port_base::baud_rate(baud));
 
     csv.open(csvFile);
+
     if (!csv.is_open()) {
         throw std::runtime_error("Failed to open CSV file");
     }
