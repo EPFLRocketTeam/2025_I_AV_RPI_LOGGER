@@ -9,9 +9,8 @@ SerialLogger::SerialLogger(const std::string& port, unsigned int baud, const std
 
     csv.open(csvFile);
 
-    if (!csv.is_open()) {
+    if (!csv.is_open())
         throw std::runtime_error("Failed to open CSV file");
-    }
 
     // Write header once
     csv << csvHeader() << std::endl;
@@ -21,24 +20,44 @@ void SerialLogger::run()
 {
     std::cout << "Listening on serial port..." << std::endl;
 
-    while (true) 
+    uint8_t len = SerialCapsule.getCodedLen(log_packet_size);
+    uint8_t buffer[len];
+
+    boost::asio::read(serial, boost::asio::buffer(buffer, len));
+    for (int i = 0; i < len; i++)
+        SerialCapsule.decode(buffer[i]);
+
+    csv << packetToCSV(*log_packet) << std::endl;
+    csv.flush();
+
+    std::cout << "Logged packet" << std::endl;
+}
+
+void SerialLogger::poll()
+{
+    boost::asio::serial_port::native_handle_type fd = serial.native_handle();
+    int available = 0;
+
+    ioctl(fd, FIONREAD, &available);
+
+    if (available >= SerialCapsule.getCodedLen(log_packet_size)) 
     {
-        uint8_t len = SerialCapsule.getCodedLen(sizeof(log_packet_t));
-        uint8_t buffer[len];
+        if (available > (int)readBuffer.size())
+            available = readBuffer.size();
 
-        boost::asio::read(serial, boost::asio::buffer(buffer, len));
-        for (int i = 0; i < len; i++)
-            SerialCapsule.decode(buffer[i]);
+        size_t bytesRead = serial.read_some(boost::asio::buffer(readBuffer, available));
 
-        csv << packetToCSV(*log_packet) << std::endl;
-        csv.flush();
-
-        std::cout << "Logged packet" << std::endl;
+        for (size_t i = 0; i < bytesRead; i++)
+            SerialCapsule.decode(readBuffer[i]);
     }
 }
 
 void SerialLogger::handleSerialCapsule(uint8_t packetId, uint8_t *dataIn, uint32_t len)
 {
-    if (len == sizeof(log_packet_t))
-        memcpy(log_packet, dataIn, sizeof(log_packet_t));
+    if (len == log_packet_size)
+        memcpy(log_packet, dataIn, log_packet_size);
+
+    csv << packetToCSV(*log_packet) << std::endl;
+    csv.flush();
+    std::cout << "Logged packet" << std::endl;
 }

@@ -62,6 +62,8 @@ struct log_packet_t {
 };
 #pragma pack(pop)
 
+const size_t log_packet_size = sizeof(log_packet_t);
+
 inline std::string packetToCSV(const log_packet_t &p) {
     std::ostringstream ss;
     ss  << p.gyro_x << "," << p.gyro_y << "," << p.gyro_z << ","
