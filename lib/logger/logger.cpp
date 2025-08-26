@@ -37,7 +37,7 @@ void SerialLogger::run()
     }
 }
 
-void handleSerialCapsule(uint8_t packetId, uint8_t *dataIn, uint32_t len)
+void SerialLogger::handleSerialCapsule(uint8_t packetId, uint8_t *dataIn, uint32_t len)
 {
     if (len == sizeof(log_packet_t))
         memcpy(log_packet, dataIn, sizeof(log_packet_t));
