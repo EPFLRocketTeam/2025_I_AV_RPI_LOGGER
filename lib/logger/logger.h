@@ -3,6 +3,7 @@
 
 #pragma once
 #include <boost/asio.hpp>
+#include <iostream>
 #include <fstream>
 #include <string>
 #include "../../include/packet_definition.h"

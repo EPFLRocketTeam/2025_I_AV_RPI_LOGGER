@@ -1,4 +1,3 @@
-#include <iostream>
 #include "logger.h"
 
 SerialLogger::SerialLogger(const std::string& port, unsigned int baud, const std::string& csvFile)
