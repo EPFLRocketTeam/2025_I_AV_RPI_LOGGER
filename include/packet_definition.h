@@ -62,7 +62,7 @@ struct log_packet_t {
 };
 #pragma pack(pop)
 
-inline std::string packetToCSV(const log_packet &p) {
+inline std::string packetToCSV(const log_packet_t &p) {
     std::ostringstream ss;
     ss  << p.gyro_x << "," << p.gyro_y << "," << p.gyro_z << ","
         << p.acc_x << "," << p.acc_y << "," << p.acc_z << ","
