@@ -1,7 +1,7 @@
 #include "logger.h"
 
 SerialLogger::SerialLogger(const std::string& port, unsigned int baud, const std::string& csvFile)
-    : serial(io, port)
+    : serial(io, port), SerialCapsule(Capsule(&SerialLogger::handleSerialCapsule, this))
 {
     log_packet = new log_packet_t;
     SerialCapsule = Capsule(&SerialLogger::handleSerialCapsule, this);
