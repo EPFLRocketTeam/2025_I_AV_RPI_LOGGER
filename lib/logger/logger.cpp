@@ -4,6 +4,9 @@
 SerialLogger::SerialLogger(const std::string& port, unsigned int baud, const std::string& csvFile)
     : serial(io, port)
 {
+    log_packet = new log_packet_t;
+    SerialCapsule = new SerialCapsule(handleSerialCapsule);
+
     serial.set_option(boost::asio::serial_port_base::baud_rate(baud));
 
     csv.open(csvFile);
@@ -21,12 +24,22 @@ void SerialLogger::run()
 
     while (true) 
     {
-        log_packet pkt;
-        boost::asio::read(serial, boost::asio::buffer(&pkt, sizeof(pkt)));
+        uint8_t len = SerialCapsule->getCodedLen(sizeof(log_packet_t));
+        uint8_t buffer[len];
 
-        csv << packetToCSV(pkt) << std::endl;
+        boost::asio::read(serial, boost::asio::buffer(buffer, len));
+        for (int i = 0; i < len; i++)
+            SerialCapsule->decode(buffer[i]);
+
+        csv << packetToCSV(log_packet) << std::endl;
         csv.flush();
 
         std::cout << "Logged packet" << std::endl;
     }
+}
+
+void handleSerialCapsule(uint8_t packetId, uint8_t *dataIn, uint32_t len)
+{
+    if (len == sizeof(log_packet_t))
+        memcpy(log_packet, dataIn, sizeof(log_packet_t));
 }

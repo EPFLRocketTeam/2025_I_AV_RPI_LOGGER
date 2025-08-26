@@ -4,7 +4,7 @@
 #include <string>
 
 #pragma pack(push, 1)
-struct log_packet {
+struct log_packet_t {
     uint16_t gyro_x;
     uint16_t gyro_y;
     uint16_t gyro_z;

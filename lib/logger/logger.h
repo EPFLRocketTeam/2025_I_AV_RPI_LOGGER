@@ -6,6 +6,7 @@
 #include <fstream>
 #include <string>
 #include "../../include/packet_definition.h"
+#include "../../lib/2024_C_AV-GS_CAPSULE/src/capsule.h"
 
 class SerialLogger {
 public:
@@ -16,6 +17,12 @@ private:
     boost::asio::io_service io;
     boost::asio::serial_port serial;
     std::ofstream csv;
+
+    log_packet_t* log_packet;
+
+    CapsuleStatic* SerialCapsule;
+
+    void handleSerialCapsule(uint8_t packetId, uint8_t *dataIn, uint32_t len);
 };
 
 
