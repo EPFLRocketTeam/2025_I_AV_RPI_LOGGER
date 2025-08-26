@@ -4,7 +4,7 @@ SerialLogger::SerialLogger(const std::string& port, unsigned int baud, const std
     : serial(io, port)
 {
     log_packet = new log_packet_t;
-    SerialCapsule = new SerialCapsule(handleSerialCapsule);
+    SerialCapsule = new Capsule(handleSerialCapsule);
 
     serial.set_option(boost::asio::serial_port_base::baud_rate(baud));
 
@@ -30,7 +30,7 @@ void SerialLogger::run()
         for (int i = 0; i < len; i++)
             SerialCapsule->decode(buffer[i]);
 
-        csv << packetToCSV(log_packet) << std::endl;
+        csv << packetToCSV(*log_packet) << std::endl;
         csv.flush();
 
         std::cout << "Logged packet" << std::endl;
