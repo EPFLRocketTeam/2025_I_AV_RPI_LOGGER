@@ -16,7 +16,6 @@ include_directories(
 # Source files
 set(SOURCES
     src/main.cpp
-    lib/2024_C_AV-GS_CAPSULE/src/basicExample.cpp
     lib/logger/logger.cpp
 )
 

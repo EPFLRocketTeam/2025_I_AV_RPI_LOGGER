@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "../lib/logger/logger.h"
+
 #define SERIAL_PORT "/dev/serial0"
 
 int main() {
