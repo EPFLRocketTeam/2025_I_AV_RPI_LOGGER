@@ -5,7 +5,7 @@
 #include <boost/asio.hpp>
 #include <fstream>
 #include <string>
-#include "../../packet_definition.h"
+#include "../../include/packet_definition.h"
 
 class SerialLogger {
 public:
