@@ -6,7 +6,7 @@
 #include <fstream>
 #include <string>
 #include "../../include/packet_definition.h"
-#include "../../lib/2024_C_AV-GS_CAPSULE/src/capsule.h"
+#include "../2024_C_AV-GS_CAPSULE/src/capsule.h"
 
 class SerialLogger {
 public:
