@@ -1,0 +1,3 @@
+[submodule "lib/2024_C_AV-GS_CAPSULE"]
+	path = lib/2024_C_AV-GS_CAPSULE
+	url = git@github.com:EPFLRocketTeam/2024_C_AV-GS_CAPSULE.git
