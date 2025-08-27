@@ -100,7 +100,7 @@ inline std::string packetToCSV(const log_packet_t &p) {
         << fixed16_to_float(p.chamber_pressure) << "," << fixed16_to_float(p.pressure_ETH) << "," << fixed16_to_float(p.pressure_N2O) << ","
         << fixed16_to_float(p.pressure_inj_ETH) << "," << fixed16_to_float(p.pressure_inj_N2O) << "," << fixed16_to_float(p.temp_N2O) << ","
         << (bool)p.vent_ETH << "," << (bool)p.vent_N2O << "," << (bool)p.sol_N2 << ","
-        << p.main_ETH << "," << p.main_N2O << ","
+        << (int)p.main_ETH << "," << (int)p.main_N2O << ","
         << (bool)p.sol_ETH << "," << (bool)p.sol_N2O << ","
         << (bool)p.igniter << ","
         << (bool)p.sequence_finished << ","
@@ -108,7 +108,7 @@ inline std::string packetToCSV(const log_packet_t &p) {
         << (bool)p.gimbal_homing << "," << (bool)p.gimbal_homing_done << ","
         << (bool)p.cmd_idle << "," << (bool)p.cmd_arm << "," << (bool)p.cmd_launch << ","
         << (bool)p.cmd_abort << "," << (bool)p.cmd_tare_orientation << "," << (bool)p.cmd_tare_pressures << ","
-        << p.hopper_state;
+        << (int)p.hopper_state;
     return ss.str();
 }
 
