@@ -59,5 +59,5 @@ void SerialLogger::handleSerialCapsule(uint8_t packetId, uint8_t *dataIn, uint32
 
     csv << packetToCSV(*log_packet) << std::endl;
     csv.flush();
-    std::cout << "Logged packet" << std::endl;
+    std::cout << "Logged packet.. " << fixed16_to_float(log_packet->kalman_pitch) << std::endl;
 }

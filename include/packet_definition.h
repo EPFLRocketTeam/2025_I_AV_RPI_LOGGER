@@ -3,6 +3,31 @@
 #include <sstream>
 #include <string>
 
+static uint16_t float_to_fixed16(float value) 
+{
+    // Scale by 2^6 (because 6 fractional bits)
+    int32_t scaled = (int32_t)roundf(value * (1 << 6));
+
+    // Range check: signed 16-bit fixed Q9.6 covers -32768/64 to 32767/64
+    if (scaled > 0x7FFF) {   // clamp to max positive
+        scaled = 0x7FFF;
+    } else if (scaled < -0x8000) { // clamp to min negative
+        scaled = -0x8000;
+    }
+
+    // Store as uint16_t, but bit pattern is signed two’s complement
+    return (uint16_t)(scaled & 0xFFFF);
+}
+
+static float fixed16_to_float(uint16_t fixed) 
+{
+    // Interpret the bits as a signed 16-bit integer
+    int16_t signed_val = (int16_t)fixed;
+
+    // Divide by 2^6 (64) to restore fractional scaling
+    return (float)signed_val / (1 << 6);
+}
+
 #pragma pack(push, 1)
 struct log_packet_t {
     uint16_t gyro_x;
@@ -66,24 +91,24 @@ const size_t log_packet_size = sizeof(log_packet_t);
 
 inline std::string packetToCSV(const log_packet_t &p) {
     std::ostringstream ss;
-    ss  << p.gyro_x << "," << p.gyro_y << "," << p.gyro_z << ","
-        << p.acc_x << "," << p.acc_y << "," << p.acc_z << ","
-        << p.baro << ","
-        << p.kalman_yaw << "," << p.kalman_pitch << "," << p.kalman_roll << ","
-        << p.gimbal_x << "," << p.gimbal_y << ","
-        << p.hv_voltage << "," << p.lv_voltage << ","
-        << p.chamber_pressure << "," << p.pressure_ETH << "," << p.pressure_N2O << ","
-        << p.pressure_inj_ETH << "," << p.pressure_inj_N2O << "," << p.temp_N2O << ","
-        << (int)p.vent_ETH << "," << (int)p.vent_N2O << "," << (int)p.sol_N2 << ","
-        << (int)p.main_ETH << "," << (int)p.main_N2O << ","
-        << (int)p.sol_ETH << "," << (int)p.sol_N2O << ","
-        << (int)p.igniter << ","
-        << (int)p.sequence_finished << ","
-        << (int)p.main_valves_homing << "," << (int)p.main_valves_homing_done << ","
-        << (int)p.gimbal_homing << "," << (int)p.gimbal_homing_done << ","
-        << (int)p.cmd_idle << "," << (int)p.cmd_arm << "," << (int)p.cmd_launch << ","
-        << (int)p.cmd_abort << "," << (int)p.cmd_tare_orientation << "," << (int)p.cmd_tare_pressures << ","
-        << (int)p.hopper_state;
+    ss  << fixed16_to_float(p.gyro_x) << "," << fixed16_to_float(p.gyro_y) << "," << fixed16_to_float(p.gyro_z) << ","
+        << fixed16_to_float(p.acc_x) << "," << fixed16_to_float(p.acc_y) << "," << fixed16_to_float(p.acc_z) << ","
+        << fixed16_to_float(p.baro) << ","
+        << fixed16_to_float(p.kalman_yaw) << "," << fixed16_to_float(p.kalman_pitch) << "," << fixed16_to_float(p.kalman_roll) << ","
+        << fixed16_to_float(p.gimbal_x) << "," << fixed16_to_float(p.gimbal_y) << ","
+        << fixed16_to_float(p.hv_voltage) << "," << fixed16_to_float(p.lv_voltage) << ","
+        << fixed16_to_float(p.chamber_pressure) << "," << fixed16_to_float(p.pressure_ETH) << "," << fixed16_to_float(p.pressure_N2O) << ","
+        << fixed16_to_float(p.pressure_inj_ETH) << "," << fixed16_to_float(p.pressure_inj_N2O) << "," << fixed16_to_float(p.temp_N2O) << ","
+        << (bool)p.vent_ETH << "," << (bool)p.vent_N2O << "," << (bool)p.sol_N2 << ","
+        << p.main_ETH << "," << p.main_N2O << ","
+        << (bool)p.sol_ETH << "," << (bool)p.sol_N2O << ","
+        << (bool)p.igniter << ","
+        << (bool)p.sequence_finished << ","
+        << (bool)p.main_valves_homing << "," << (bool)p.main_valves_homing_done << ","
+        << (bool)p.gimbal_homing << "," << (bool)p.gimbal_homing_done << ","
+        << (bool)p.cmd_idle << "," << (bool)p.cmd_arm << "," << (bool)p.cmd_launch << ","
+        << (bool)p.cmd_abort << "," << (bool)p.cmd_tare_orientation << "," << (bool)p.cmd_tare_pressures << ","
+        << p.hopper_state;
     return ss.str();
 }
 
