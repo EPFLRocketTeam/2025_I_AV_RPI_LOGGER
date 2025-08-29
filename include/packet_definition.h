@@ -84,6 +84,7 @@ struct log_packet_t {
     uint8_t cmd_tare_pressures;
 
     uint8_t hopper_state;
+    uint32_t timestamp;
 };
 #pragma pack(pop)
 
@@ -108,7 +109,8 @@ inline std::string packetToCSV(const log_packet_t &p) {
         << (bool)p.gimbal_homing << "," << (bool)p.gimbal_homing_done << ","
         << (bool)p.cmd_idle << "," << (bool)p.cmd_arm << "," << (bool)p.cmd_launch << ","
         << (bool)p.cmd_abort << "," << (bool)p.cmd_tare_orientation << "," << (bool)p.cmd_tare_pressures << ","
-        << (int)p.hopper_state;
+        << (int)p.hopper_state 
+        << (uint32_t)p.timestamp;
     return ss.str();
 }
 
@@ -124,5 +126,6 @@ inline std::string csvHeader() {
            "main_ETH,main_N2O,sol_ETH,sol_N2O,igniter,sequence_finished,"
            "main_valves_homing,main_valves_homing_done,gimbal_homing,gimbal_homing_done,"
            "cmd_idle,cmd_arm,cmd_launch,cmd_abort,cmd_tare_orientation,cmd_tare_pressures,"
-           "hopper_state";
+           "hopper_state",
+           "timestamp";
 }
