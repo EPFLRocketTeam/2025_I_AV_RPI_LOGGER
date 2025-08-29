@@ -126,6 +126,6 @@ inline std::string csvHeader() {
            "main_ETH,main_N2O,sol_ETH,sol_N2O,igniter,sequence_finished,"
            "main_valves_homing,main_valves_homing_done,gimbal_homing,gimbal_homing_done,"
            "cmd_idle,cmd_arm,cmd_launch,cmd_abort,cmd_tare_orientation,cmd_tare_pressures,"
-           "hopper_state",
+           "hopper_state,"
            "timestamp";
 }
