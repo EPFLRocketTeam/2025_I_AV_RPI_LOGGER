@@ -1,3 +1,6 @@
 [submodule "lib/2024_C_AV-GS_CAPSULE"]
 	path = lib/2024_C_AV-GS_CAPSULE
 	url = git@github.com:EPFLRocketTeam/2024_C_AV-GS_CAPSULE.git
+[submodule "lib/2025_I_AV_OBJECT_DICTIONARY"]
+	path = lib/2025_I_AV_OBJECT_DICTIONARY
+	url = git@github.com:EPFLRocketTeam/2025_I_AV_OBJECT_DICTIONARY.git

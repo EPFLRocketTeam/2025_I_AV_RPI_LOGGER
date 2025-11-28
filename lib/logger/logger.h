@@ -8,6 +8,10 @@
 #include <string>
 #include "../../include/packet_definition.h"
 #include "../2024_C_AV-GS_CAPSULE/src/capsule.h"
+#include <filesystem>
+#include <regex>
+
+std::string csvHeader();
 
 class SerialLogger {
 public:
@@ -21,7 +25,8 @@ private:
     boost::asio::serial_port serial;
     std::ofstream csv;
 
-    log_packet_t* log_packet;
+    //log_packet_t* log_packet;
+    ObjectDictionary* log_objDict;
 
     Capsule<SerialLogger> SerialCapsule;
 

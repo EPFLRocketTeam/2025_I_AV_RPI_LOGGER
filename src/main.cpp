@@ -13,7 +13,7 @@
 int main()
 {
     unsigned int baud = 115200;
-    std::string filename = "log_data.csv";
+    std::string filename = getNextLogFilename("logs");
 
     SerialLogger logger(SERIAL_PORT, baud, filename);
 
