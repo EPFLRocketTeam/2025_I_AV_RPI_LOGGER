@@ -13,6 +13,7 @@
 #include "../2025_I_AV_OBJECT_DICTIONARY/object_dictionary.h"
 
 std::string csvHeader();
+std::string getNextLogFilename(const std::string& directory);
 
 class SerialLogger {
 public:
