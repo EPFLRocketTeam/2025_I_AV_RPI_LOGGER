@@ -10,6 +10,7 @@
 #include "../2024_C_AV-GS_CAPSULE/src/capsule.h"
 #include <filesystem>
 #include <regex>
+#include "../2025_I_AV_OBJECT_DICTIONARY/object_dictionary.h"
 
 std::string csvHeader();
 
