@@ -25,7 +25,7 @@ public:
 private:
     boost::asio::io_service io;
     boost::asio::serial_port serial;
-    std::ofstream csv;
+    std::string& _csvFile;
 
     
     std::chrono::steady_clock::time_point startTime;

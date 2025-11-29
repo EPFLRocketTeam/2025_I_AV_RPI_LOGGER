@@ -1,18 +1,5 @@
 #include "logger.h"
 
-void fsync_ofstream(std::ofstream& file)
-{
-    file.flush();
-
-    int fd = -1;
-
-#if defined(__GLIBCXX__)
-    fd = file.rdbuf()->fd();   // Extension GNU/libstdc++
-#endif
-
-    if (fd != -1)
-        fsync(fd);
-}
 
 std::string csvHeader()
 {
@@ -62,19 +49,22 @@ SerialLogger::SerialLogger(const std::string& port, unsigned int baud, const std
 
     serial.set_option(boost::asio::serial_port_base::baud_rate(baud));
 
-    csv.open(csvFile);
+    _csvFile = csvFile;
+    //csv.open(csvFile);
 
-    if (!csv.is_open())
+    std::ofstream out(_csvFile, std::ios::app);
+
+    if (!out.is_open())
     {
         throw std::runtime_error("Failed to open CSV file");
     }
     else
     {
-        std::cout << "Logging to " << csvFile << std::endl;
+        std::cout << "Start logging to " << csvFile << std::endl;
     }
 
     // Write header once
-    csv << csvHeader() << std::endl;
+    out << csvHeader() << std::endl;
 }
 
 // void SerialLogger::run() // not used
@@ -123,7 +113,10 @@ void SerialLogger::handleSerialCapsule(uint8_t packetId, uint8_t *dataIn, uint32
     auto now = std::chrono::steady_clock::now() - startTime;
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
 
-    csv << ms << "," << objectDictionaryCSV(*log_objDict) << std::endl;
-    fsync_ofstream(csv);
-    std::cout << "[ " << ms << " ms] Logged packet.. (PN: " << fixed16_to_float(log_objDict->sol_N2) << ")" << std::endl;
+    std::ofstream out(_csvFile, std::ios::app);
+    if (!out.is_open())
+    {
+        out << ms << "," << objectDictionaryCSV(*log_objDict) << std::endl;
+        std::cout << "[ " << ms << " ms] Logged packet.. (PN: " << fixed16_to_float(log_objDict->sol_N2) << ")" << std::endl;   
+    }
 }
