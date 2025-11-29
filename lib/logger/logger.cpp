@@ -106,8 +106,8 @@ void SerialLogger::handleSerialCapsule(uint8_t packetId, uint8_t *dataIn, uint32
         memcpy(log_objDict, dataIn, object_dictionary_size);
 
     // timestamp en ms depuis l'époque
-    auto now = std::chrono::system_clock::now() - startTime;
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+    auto now = std::chrono::steady_clock::now() - startTime;
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();   
     csv << ms << "," << objectDictionaryCSV(*log_objDict) << std::endl;
     csv.flush();
     std::cout << "[ " << ms << " ms] Logged packet.. (PN: " << fixed16_to_float(log_objDict->sol_N2) << ")" << std::endl;
