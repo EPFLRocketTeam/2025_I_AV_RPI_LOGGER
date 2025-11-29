@@ -61,22 +61,22 @@ SerialLogger::SerialLogger(const std::string& port, unsigned int baud, const std
     csv << csvHeader() << std::endl;
 }
 
-void SerialLogger::run() // not used
-{
-    std::cout << "Listening on serial port..." << std::endl;
+// void SerialLogger::run() // not used
+// {
+//     std::cout << "Listening on serial port..." << std::endl;
 
-    uint8_t len = SerialCapsule.getCodedLen(object_dictionary_size);
-    uint8_t buffer[len];
+//     uint8_t len = SerialCapsule.getCodedLen(object_dictionary_size);
+//     uint8_t buffer[len];
 
-    boost::asio::read(serial, boost::asio::buffer(buffer, len));
-    for (int i = 0; i < len; i++)
-        SerialCapsule.decode(buffer[i]);
+//     boost::asio::read(serial, boost::asio::buffer(buffer, len));
+//     for (int i = 0; i < len; i++)
+//         SerialCapsule.decode(buffer[i]);
 
-    csv << packetToCSV(*log_packet) << std::endl;
-    csv.flush();
+//     csv << packetToCSV(*log_packet) << std::endl;
+//     csv.flush();
 
-    std::cout << "Logged packet" << std::endl;
-}
+//     std::cout << "Logged packet" << std::endl;
+// }
 
 void SerialLogger::poll()
 {
