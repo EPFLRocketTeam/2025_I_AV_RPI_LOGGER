@@ -42,7 +42,7 @@ std::string getNextLogFilename(const std::string& directory)
 SerialLogger::SerialLogger(const std::string& port, unsigned int baud, const std::string& csvFile)
     : serial(io, port), SerialCapsule(&SerialLogger::handleSerialCapsule, this)
 {
-    startTime = std::chrono::system_clock::now();
+    startTime = std::chrono::steady_clock::now();
 
     log_objDict = new ObjectDictionary;
 
