@@ -103,7 +103,7 @@ void SerialLogger::handleSerialCapsule(uint8_t packetId, uint8_t *dataIn, uint32
     if (len == object_dictionary_size)
         memcpy(log_objDict, dataIn, object_dictionary_size);
 
-    csv << packetToCSV(*log_objDict) << std::endl;
+    csv << objectDictionaryCSV(*log_objDict) << std::endl;
     csv.flush();
     std::cout << "Logged packet.. (PN: " << fixed16_to_float(log_objDict->sol_N2) << ")" << std::endl;
 }
