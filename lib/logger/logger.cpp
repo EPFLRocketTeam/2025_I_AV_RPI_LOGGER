@@ -64,17 +64,17 @@ SerialLogger::SerialLogger(const std::string& port, unsigned int baud, const std
 // void SerialLogger::run() // not used
 // {
 //     std::cout << "Listening on serial port..." << std::endl;
-
+//
 //     uint8_t len = SerialCapsule.getCodedLen(object_dictionary_size);
 //     uint8_t buffer[len];
-
+//
 //     boost::asio::read(serial, boost::asio::buffer(buffer, len));
 //     for (int i = 0; i < len; i++)
 //         SerialCapsule.decode(buffer[i]);
-
+//
 //     csv << packetToCSV(*log_packet) << std::endl;
 //     csv.flush();
-
+//
 //     std::cout << "Logged packet" << std::endl;
 // }
 
@@ -103,7 +103,10 @@ void SerialLogger::handleSerialCapsule(uint8_t packetId, uint8_t *dataIn, uint32
     if (len == object_dictionary_size)
         memcpy(log_objDict, dataIn, object_dictionary_size);
 
-    csv << objectDictionaryCSV(*log_objDict) << std::endl;
+    // timestamp en ms depuis l'époque
+    auto now = std::chrono::system_clock::now();
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+    csv << ms << "," << objectDictionaryCSV(*log_objDict) << std::endl;
     csv.flush();
     std::cout << "Logged packet.. (PN: " << fixed16_to_float(log_objDict->sol_N2) << ")" << std::endl;
 }
