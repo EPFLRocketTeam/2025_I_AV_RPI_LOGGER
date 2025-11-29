@@ -42,6 +42,8 @@ std::string getNextLogFilename(const std::string& directory)
 SerialLogger::SerialLogger(const std::string& port, unsigned int baud, const std::string& csvFile)
     : serial(io, port), SerialCapsule(&SerialLogger::handleSerialCapsule, this)
 {
+    startTime = std::chrono::system_clock::now()
+
     log_objDict = new ObjectDictionary;
 
     serial.set_option(boost::asio::serial_port_base::baud_rate(baud));
@@ -104,9 +106,9 @@ void SerialLogger::handleSerialCapsule(uint8_t packetId, uint8_t *dataIn, uint32
         memcpy(log_objDict, dataIn, object_dictionary_size);
 
     // timestamp en ms depuis l'époque
-    auto now = std::chrono::system_clock::now();
+    auto now = std::chrono::system_clock::now() - startTime;
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
     csv << ms << "," << objectDictionaryCSV(*log_objDict) << std::endl;
     csv.flush();
-    std::cout << "Logged packet.. (PN: " << fixed16_to_float(log_objDict->sol_N2) << ")" << std::endl;
+    std::cout << "[ " << ms << " ms] Logged packet.. (PN: " << fixed16_to_float(log_objDict->sol_N2) << ")" << std::endl;
 }

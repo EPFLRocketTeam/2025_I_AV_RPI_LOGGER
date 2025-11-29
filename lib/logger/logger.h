@@ -10,6 +10,7 @@
 #include "../2024_C_AV-GS_CAPSULE/src/capsule.h"
 #include <filesystem>
 #include <regex>
+#include <chrono>
 #include "../2025_I_AV_OBJECT_DICTIONARY/object_dictionary.h"
 
 std::string csvHeader();
@@ -24,10 +25,11 @@ public:
 
 private:
     boost::asio::io_service io;
-    boost::asio::serial_port serial;
     std::ofstream csv;
 
-    //log_packet_t* log_packet;
+    
+    std::chrono::steady_clock::time_point startTime;
+    ObjectDictionary* log_objDict;
     ObjectDictionary* log_objDict;
 
     Capsule<SerialLogger> SerialCapsule;
