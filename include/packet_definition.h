@@ -3,7 +3,7 @@
 #include <sstream>
 #include <string>
 
-#pragma pack(push, 1)
+
 struct log_packet_t {
     uint16_t gyro_x;
     uint16_t gyro_y;
@@ -61,7 +61,7 @@ struct log_packet_t {
     uint8_t hopper_state;
     uint32_t timestamp;
 };
-#pragma pack(pop)
+//#pragma pack(pop)
 
 const size_t log_packet_size = sizeof(log_packet_t);
 
