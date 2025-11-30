@@ -50,13 +50,13 @@ SerialLogger::SerialLogger(const std::string& port, unsigned int baud, const std
     serial.set_option(boost::asio::serial_port_base::baud_rate(baud));
 
     _csvFile = csvFile;
-    //csv.open(csvFile);
+    csv.open(csvFile);
 
-    std::ofstream out(_csvFile, std::ios::app);
+    //std::ofstream out(_csvFile, std::ios::app);
 
-    if (!out.is_open())
+    if (!csv.is_open())
     {
-        throw std::runtime_error("Failed to open CSV file");
+        throw std::runtime_error("Failed to open CSV file. Did you do the Deamon ? ");
     }
     else
     {
@@ -64,7 +64,7 @@ SerialLogger::SerialLogger(const std::string& port, unsigned int baud, const std
     }
 
     // Write header once
-    out << csvHeader() << std::endl;
+    csv << csvHeader() << std::endl;
 }
 
 // void SerialLogger::run() // not used
@@ -113,10 +113,10 @@ void SerialLogger::handleSerialCapsule(uint8_t packetId, uint8_t *dataIn, uint32
     auto now = std::chrono::steady_clock::now() - startTime;
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
 
-    std::ofstream out(_csvFile, std::ios::app);
-    if (out.is_open())
+    //std::ofstream out(_csvFile, std::ios::app);
+    if (csv.is_open())
     {
-        out << ms << "," << objectDictionaryCSV(*log_objDict) << std::endl;
+        csv << ms << "," << objectDictionaryCSV(*log_objDict) << std::endl;
         std::cout << "[ " << ms << " ms] Logged packet.. (PN: " << fixed16_to_float(log_objDict->sol_N2) << ")" << std::endl;   
     }
 }
