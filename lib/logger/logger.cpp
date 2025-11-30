@@ -116,7 +116,12 @@ void SerialLogger::handleSerialCapsule(uint8_t packetId, uint8_t *dataIn, uint32
     //std::ofstream out(_csvFile, std::ios::app);
     if (csv.is_open())
     {
+        
         csv << ms << "," << objectDictionaryCSV(*log_objDict) << std::endl;
         std::cout << "[ " << ms << " ms] Logged packet.. (PN: " << fixed16_to_float(log_objDict->sol_N2) << ")" << std::endl;   
     }
+
+    auto now = std::chrono::steady_clock::now() - startTime;
+    auto t2 = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
+    std::cout << " time: " << t2 - ms << " ms" << std::endl;
 }
