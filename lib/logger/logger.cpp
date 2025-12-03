@@ -118,7 +118,7 @@ void SerialLogger::handleSerialCapsule(uint8_t packetId, uint8_t *dataIn, uint32
     {
         
         csv << ms << "," << objectDictionaryCSV(*log_objDict) << std::endl;
-        std::cout << "[ " << ms << " ms] Logged packet.. (PN: " << fixed16_to_float(log_objDict->sol_N2) << ")" << std::endl;   
+        std::cout << "[ " << ms << " ms] Logged packet.. (Gyro_x: " << fixed16_to_float(log_objDict->sol_N2) << ") or (Gyro_x: " << log_objDict->sol_N2 << std::endl;   
     }
 
 }
