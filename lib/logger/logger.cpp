@@ -123,6 +123,9 @@ void SerialLogger::handleSerialCapsule(uint8_t packetId, uint8_t *dataIn, uint32
         std::cout << " Gyro_x: " << fixed16_to_float(log_objDict->gyro_x) << std::endl;
         std::cout << " Gyro_y: " << fixed16_to_float(log_objDict->gyro_y) << std::endl;
         std::cout << " Gyro_z: " << fixed16_to_float(log_objDict->gyro_z) << std::endl;
+        std::cout << " alt Gyro_x: " << log_objDict->gyro_x << std::endl;
+        std::cout << " alt Gyro_y: " << log_objDict->gyro_y << std::endl;
+        std::cout << " alt Gyro_z: " << log_objDict->gyro_z << std::endl;
         csv.flush();
     }
 
