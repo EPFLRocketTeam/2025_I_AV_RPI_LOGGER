@@ -14,7 +14,7 @@
 
 int main()
 {
-    unsigned int baud = 115200;
+    unsigned int baud = 500000;
     std::string filename = getNextLogFilename("logs");
 
     SerialLogger logger(SERIAL_PORT, baud, filename);
