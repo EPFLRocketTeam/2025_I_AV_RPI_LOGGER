@@ -109,26 +109,18 @@ void SerialLogger::handleSerialCapsule(uint8_t packetId, uint8_t *dataIn, uint32
     if (len == object_dictionary_size)
         memcpy(log_objDict, dataIn, object_dictionary_size);
 
-    // timestamp en ms
+    // timestamp in ms
     auto now = std::chrono::steady_clock::now() - startTime;
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
-
-    auto now1 = std::chrono::steady_clock::now() - startTime;
+    // cycle time in us
+    auto cycle_time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - lastLogTime).count();
+    lastLogTime = std::chrono::steady_clock::now();
     //std::ofstream out(_csvFile, std::ios::app);
     if (csv.is_open())
     {
         csv << ms << "," << objectDictionaryCSV(*log_objDict) << std::endl;
-        std::cout << "[ " << ms << " ms] Logged packet...   " ;
-        std::cout << "Gyro_x: " << log_objDict->gyro_x << std::endl;
+        std::cout << "[ " << ms << " ms] Logged packet in " << cycle_time << " us.";
+        std::cout << "pressure_inj_ETH: " << log_objDict->pressure_inj_ETH << std::endl;
         csv.flush();
     }
-    auto now2 = std::chrono::steady_clock::now() - startTime;
-    std::cout << "csv took "
-              << std::chrono::duration_cast<std::chrono::microseconds>(now2 - now1).count()
-              << " us" << std::endl;
-
-    std::cout << "cycle time: "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - lastLogTime).count()
-              << " ms" << std::endl;
-    lastLogTime = std::chrono::steady_clock::now();
 }
