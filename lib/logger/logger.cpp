@@ -128,7 +128,7 @@ void SerialLogger::handleSerialCapsule(uint8_t packetId, uint8_t *dataIn, uint32
               << " us" << std::endl;
 
     std::cout << "cycle time: "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(now2 - lastLogTime).count()
+              << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - lastLogTime).count()
               << " ms" << std::endl;
     lastLogTime = std::chrono::steady_clock::now();
 }
