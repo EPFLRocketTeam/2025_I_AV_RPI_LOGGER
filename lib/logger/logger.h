@@ -31,6 +31,7 @@ private:
 
     
     std::chrono::steady_clock::time_point startTime;
+    std::chrono::steady_clock::time_point lastLogTime;
     ObjectDictionary* log_objDict;
 
     Capsule<SerialLogger> SerialCapsule;
